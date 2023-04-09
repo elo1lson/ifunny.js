@@ -1,54 +1,87 @@
 import sys
 import requests
+import qdarkstyle
 from PySide6.QtCore import Qt, QUrl, QSize
 from PySide6.QtGui import QPixmap
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest
 from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QMainWindow, QVBoxLayout, QWidget, QStyleFactory, QPushButton
-import qdarkstyle
+
 
 class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Enter the image code here")
-        self.setFixedSize(QSize(300, 200))
-
+        
+        url = sys.argv[1]
+        
+        self.setWindowTitle("Captcha")
+        self.setFixedSize(QSize(260, 280))
+        self.init_title
+        
         central_widget = QWidget()
+        central_widget.setStyleSheet("""
+            background-color: #18191e;
+            """)
         self.setCentralWidget(central_widget)
 
-        vbox = QVBoxLayout(central_widget)
+        self.vbox = QVBoxLayout(central_widget)
 
         self.label = QLabel()
 
         self.manager = QNetworkAccessManager(self)
-        url = sys.argv[1]
 
         request = QNetworkRequest(QUrl(url))
         self.reply = self.manager.get(request)
         self.reply.finished.connect(self.handle_image)
+        
 
-        vbox.addWidget(self.label)
+        self.vbox.addWidget(self.label)
 
         self.line_edit = QLineEdit()
-        self.line_edit.returnPressed.connect(self.update_image)
+        self.line_edit.setPlaceholderText("Insert the code")
+        self.line_edit.returnPressed.connect(self.on_button_clicked)
 
-        self.button = QPushButton("Send")
+        self.button = QPushButton("Done")
+        self.button.setStyleSheet('''
+            QPushButton {
+                border-radius: 10px;
+                background-color: #7F7F7F;
+                color: white;
+            }
+        
+            QPushButton:hover {
+                background-color: #7F7F7F;
+            }
+        
+            QPushButton:pressed {
+                background-color: #2E562E;
+            }
+        ''')
         self.button.clicked.connect(self.on_button_clicked)
-        vbox.addWidget(self.line_edit)
-        vbox.addWidget(self.button)
+        
+        self.vbox.addWidget(self.line_edit)
+        self.vbox.addWidget(self.button)
 
+    def init_title(self):
+        self.title = QLabel("Verify Captcha")
+        self.title.setAlignment(Qt.AlignCenter)
+        self.title.setStyleSheet("""
+        background-color: #18191e;
+        color: #FFFFFF;
+        font-family: ProximaNovaCond, arial;
+        font-size: 20px;
+        font-weight: 700;
+        margin: 10px, auto;
+        padding: 0;
+        """)
+        self.vbox.addWidget(self.title)
+        
+     
     def handle_image(self):
         pixmap = QPixmap()
         pixmap.loadFromData(self.reply.readAll())
-        pixmap = pixmap.scaled(pixmap.width()*1.2, pixmap.height()*1.2, Qt.KeepAspectRatio)
         self.label.setPixmap(pixmap)
         self.label.setAlignment(Qt.AlignCenter)
-
-    def update_image(self):
-        url = self.line_edit.text()
-        request = QNetworkRequest(QUrl(url))
-        self.reply = self.manager.get(request)
-        self.reply.finished.connect(self.handle_image)
 
     def on_button_clicked(self):
         captcha = self.line_edit.text()

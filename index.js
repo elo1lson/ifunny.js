@@ -9,5 +9,4 @@ const credentials = getToken().then((c) => {
 		cookie: c.rawCookie,
 		token: c.token,
 	}).login();
-	//.post("https://i.stack.imgur.com/H186L.png", { description: "oi" });
 });
