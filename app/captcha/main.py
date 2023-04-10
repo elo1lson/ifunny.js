@@ -16,15 +16,10 @@ class MainWindow(QMainWindow):
         
         self.setWindowTitle("Captcha")
         self.setFixedSize(QSize(260, 280))
-        self.init_title
         
-        central_widget = QWidget()
-        central_widget.setStyleSheet("""
-            background-color: #18191e;
-            """)
-        self.setCentralWidget(central_widget)
-
-        self.vbox = QVBoxLayout(central_widget)
+        self.init_central_widget()
+        self.init_title()
+        self.init_button()    
 
         self.label = QLabel()
 
@@ -32,8 +27,7 @@ class MainWindow(QMainWindow):
 
         request = QNetworkRequest(QUrl(url))
         self.reply = self.manager.get(request)
-        self.reply.finished.connect(self.handle_image)
-        
+        self.reply.finished.connect(self.handle_image)    
 
         self.vbox.addWidget(self.label)
 
@@ -41,6 +35,19 @@ class MainWindow(QMainWindow):
         self.line_edit.setPlaceholderText("Insert the code")
         self.line_edit.returnPressed.connect(self.on_button_clicked)
 
+    
+        self.vbox.addWidget(self.line_edit)
+        self.vbox.addWidget(self.button)
+
+    def init_central_widget(self):
+        self.central_widget = QWidget()
+        self.central_widget.setStyleSheet("""
+            background-color: #18191e;
+            """)
+        self.setCentralWidget(self.central_widget)
+        self.vbox = QVBoxLayout(self.central_widget)
+    
+    def init_button(self):
         self.button = QPushButton("Done")
         self.button.setStyleSheet('''
             QPushButton {
@@ -58,10 +65,8 @@ class MainWindow(QMainWindow):
             }
         ''')
         self.button.clicked.connect(self.on_button_clicked)
-        
-        self.vbox.addWidget(self.line_edit)
-        self.vbox.addWidget(self.button)
 
+    
     def init_title(self):
         self.title = QLabel("Verify Captcha")
         self.title.setAlignment(Qt.AlignCenter)
@@ -87,8 +92,7 @@ class MainWindow(QMainWindow):
         captcha = self.line_edit.text()
         sys.stdout.write(captcha)
         sys.stdout.flush()
-        sys.exit(app.exec())
-        
+        QApplication.quit()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

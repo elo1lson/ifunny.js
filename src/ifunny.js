@@ -1,9 +1,7 @@
-import e from "express";
 import { login as apiLogin } from "./api/login.js";
 import { post } from "./api/postImage.js";
 import Credentials from "./structures/login.js";
 export { getToken } from "./config/auth.js";
-
 let credentials;
 
 export default class Ifunny {
