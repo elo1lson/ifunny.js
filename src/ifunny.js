@@ -15,17 +15,21 @@ export default class Ifunny {
 	}
 
 	async login() {
-		apiLogin(this.credentials);
+		const logged = await apiLogin(this.credentials);
+		console.log(logged, 'logged')
+		this.logged = logged;
 	}
 
 	get isLogged() {
-		return this.logged !== undefined;
+		return this.logged || null;
 	}
+
 	get getCredentials() {
 		return this.credentials || {};
 	}
-	async post(url, { tags = "", description = "" }) {
-		post(this.getCredentials, url, { tags, description });
+
+	async post(url, { tags = "", description = "", type = "video" || "pic" }) {
+		post(this.getCredentials, url, { tags, description, type });
 	}
 }
 

@@ -1,18 +1,65 @@
+import { exec } from "child_process";
+import { log } from "console";
 import * as routes from "../structures/endpoints.js";
 import axios from "../config/request.js";
-import { getToken } from "../config/auth.js";
 import { getImageChapta } from "./chapta.js";
-import { exec } from "child_process";
-import { resolve } from "path";
-import { log } from "console";
 
-export const login = async ({ email, password, cookie, token }) => {
+const validateEmailAndPassword = (email, password) => {
 	if (typeof email !== "string" || typeof password !== "string") {
 		throw new Error("Email and password must be strings");
 	}
+};
 
-	axios
-		.post(
+const handleInvalidCSRFToken = () => {
+	throw new Error("Invalid CSRF token");
+};
+
+const handleFunCaptcha = async (details, cookie, token) => {
+	const callbackDetails = async (details) => {
+		if (!details.ticketId) return;
+
+		return new Promise((resolve, reject) => {
+			const pythonProcess = exec(
+				`python3 app/captcha/main.py ${details.image}`,
+			);
+
+			pythonProcess.stdout.on("data", (data) => {
+				axios
+					.put(
+						routes.FUN_CHAPTA + "/" + details.ticketId,
+						{ code: data },
+						{
+							headers: {
+								Cookie: cookie,
+								"x-csrf-token": token,
+							},
+						},
+					)
+					.then(() => {
+						resolve({ logged: true });
+					})
+					.catch((e) => {
+						resolve(
+							getImageChapta(
+								e.response.data.details.ticketId,
+								cookie,
+								token,
+								callbackDetails,
+							),
+						);
+					});
+			});
+		});
+	};
+
+	return getImageChapta(details.ticketId, cookie, token, callbackDetails);
+};
+
+export const login = async ({ email, password, cookie, token }) => {
+	validateEmailAndPassword(email, password);
+
+	try {
+		const response = await axios.post(
 			routes.LOGIN,
 			{
 				username: email,
@@ -24,58 +71,18 @@ export const login = async ({ email, password, cookie, token }) => {
 					"x-csrf-token": token,
 				},
 			},
-		)
-		.then((r) => {
-			console.log(r.data);
-		})
-		.catch((e) => {
-			const error = e.response.data;
-			const id = error.id;
-			const code = error.code;
-			const { details } = e.response.data;
-			if (id === "ERR_INVALID_CSRF") {
-				throw new Error("Invalid CSRF token");
-			}
+		);
+		return response.data;
+	} catch (e) {
+		const error = e.response.data;
+		const { id, code, details } = error;
 
-			switch (details.type) {
-				case "fun_captcha":
-					getImageChapta(details.ticketId, cookie, token).then((r) => {
-						const pythonProcess = exec(
-							`python3 app/captcha/main.py ${r.image}`,
-						);
+		if (id === "ERR_INVALID_CSRF") {
+			handleInvalidCSRFToken();
+		}
 
-						pythonProcess.stdout.on("data", (data) => {
-							axios
-								.put(
-									routes.FUN_CHAPTA + "/" + details.ticketId,
-									{ code: data },
-									{
-										headers: {
-											Cookie: cookie,
-											"x-csrf-token": token,
-										},
-									},
-								)
-								.then((r) => {
-									console.log(r.data,222);
-								})
-								.catch((e) => {
-									console.log(e.response.data);
-								});
-						});
-
-						pythonProcess.stderr.on("data", (data) => {
-							console.error(`stderr: ${data}`);
-						});
-
-						pythonProcess.on("close", (code) => {
-							console.log(`child process exited with code ${code}`);
-						});
-					});
-					break;
-
-				default:
-					break;
-			}
-		});
+		if (details.type == "fun_captcha") {
+			return handleFunCaptcha(details, cookie, token);
+		}
+	}
 };
